@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
+	"syscall"
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/kechako/envoke/cli/clierrors"
@@ -14,6 +16,7 @@ import (
 	"github.com/kechako/envoke/ent"
 	varpred "github.com/kechako/envoke/ent/variable"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 )
 
 func Command() *cobra.Command {
@@ -63,33 +66,55 @@ Variable expansion is performed for variables with the expand flag enabled.`,
 				return err
 			}
 
+			environ, err := makeEnviron(ctx, globalEnv, env)
+			if err != nil {
+				return clierrors.Exit(err, 1)
+			}
+
 			cmdName := args[0]
 			cmdArgs := args[1:]
 
-			command := exec.CommandContext(ctx, cmdName, cmdArgs...)
-
-			command.Cancel = func() error {
-				return command.Process.Signal(os.Interrupt)
-			}
+			// To propagate signals to the child process,
+			// do not use the standard context.Context.
+			command := exec.Command(cmdName, cmdArgs...)
 
 			command.Stdin = os.Stdin
 			command.Stdout = os.Stdout
 			command.Stderr = os.Stderr
 
-			environ, err := makeEnviron(ctx, globalEnv, env)
-			if err != nil {
-				return clierrors.Exit(err, 1)
-			}
 			command.Env = environ
 
-			if err := command.Run(); err != nil {
+			exitCh := make(chan struct{})
+			sigCh := make(chan os.Signal, 1)
+			signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+
+			var g errgroup.Group
+
+			g.Go(func() error {
+				select {
+				case sig := <-sigCh:
+					return command.Process.Signal(sig)
+				case <-exitCh:
+					// child process has exited, no need to handle signals
+					return nil
+				}
+			})
+
+			g.Go(func() error {
+				defer close(exitCh)
+				err := command.Run()
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+
+			if err := g.Wait(); err != nil {
 				var exitErr *exec.ExitError
 				if errors.Is(err, exitErr) {
 					return err
 				}
-				if !errors.Is(err, context.Canceled) {
-					return clierrors.Exit(err, 1)
-				}
+				return clierrors.Exit(err, 1)
 			}
 
 			return nil
