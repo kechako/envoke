@@ -23,7 +23,7 @@ go install github.com/kechako/envoke/cmd/envoke@latest
 
 ```bash
 # Create an environment
-envoke env create development
+envoke create development
 
 # Add an environment variable
 envoke var add -e development DATABASE_URL "postgres://localhost/myapp_dev"
@@ -39,22 +39,22 @@ envoke run -e development npm start
 
 ```bash
 # List environments
-envoke env list
+envoke list
 
 # Create environment
-envoke env create <environment_name>
+envoke create <environment_name>
 
 # Remove environment
-envoke env remove <environment_name>
+envoke remove <environment_name>
 
 # Rename environment
-envoke env rename <old_name> <new_name>
+envoke rename <old_name> <new_name>
 
 # Copy environment
-envoke env copy <source> <destination>
+envoke copy <source> <destination>
 
 # Update environment (change description)
-envoke env update <environment_name>
+envoke update <environment_name>
 ```
 
 ### Variable Management

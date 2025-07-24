@@ -9,8 +9,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func createCommand() *cobra.Command {
+func CreateCommand() *cobra.Command {
 	cmd := &cobra.Command{
+		GroupID: GroupID,
 		Use:     "create [flags] <name>",
 		Aliases: []string{"new"},
 		Short:   "Create a new environment",
@@ -20,10 +21,10 @@ Each environment maintains its own set of variables that can be used
 when running commands. Variables from the 'global' environment are
 always included and can be overridden by environment-specific values.`,
 		Example: `  # Create a basic environment
-  envoke env create development
+  envoke create development
 
   # Create an environment with description
-  envoke env create production --description "Production environment"`,
+  envoke create production --description "Production environment"`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if err := cobra.ExactArgs(1)(cmd, args); err != nil {
 				return err

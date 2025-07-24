@@ -1,5 +1,5 @@
-// Package run provides functionality to run commands in a specified environment.
-package run
+// Package execution provides functionality to run commands in a specified environment.
+package execution
 
 import (
 	"context"
@@ -19,10 +19,13 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+const GroupID = "execution"
+
 func Command() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "run [flags] [--] <command> [<args>...]",
-		Short: "Run a command in the specified environment",
+		GroupID: GroupID,
+		Use:     "run [flags] [--] <command> [<args>...]",
+		Short:   "Run a command in the specified environment",
 		Long: `Run a command with environment variables loaded from the specified environment.
 
 Variables are loaded in the following order of precedence:

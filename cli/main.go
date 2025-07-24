@@ -14,7 +14,7 @@ import (
 	"entgo.io/ent/dialect/sql/schema"
 	"github.com/kechako/envoke/cli/clierrors"
 	"github.com/kechako/envoke/cli/environment"
-	"github.com/kechako/envoke/cli/run"
+	"github.com/kechako/envoke/cli/execution"
 	"github.com/kechako/envoke/cli/variable"
 	"github.com/kechako/envoke/config"
 	"github.com/kechako/envoke/ent"
@@ -46,7 +46,7 @@ Features:
   • Run commands with environment variables loaded`,
 		Version: appVersion,
 		Example: `  # Create a development environment
-  envoke env create development
+  envoke create development
 
   # Add environment variables
   envoke var add -e development DATABASE_URL "postgres://localhost/myapp_dev"
@@ -122,10 +122,33 @@ Features:
 
 	cmd.PersistentFlags().StringP("config", "c", "", "Path to the configuration file")
 
+	cmd.AddGroup(&cobra.Group{
+		ID:    environment.GroupID,
+		Title: "Environment Management:",
+	})
 	cmd.AddCommand(
-		environment.Command(),
+		environment.CopyCommand(),
+		environment.CreateCommand(),
+		environment.ListCommand(),
+		environment.RemoveCommand(),
+		environment.RenameCommand(),
+		environment.UpdateCommand(),
+	)
+
+	cmd.AddGroup(&cobra.Group{
+		ID:    variable.GroupID,
+		Title: "Variable Management:",
+	})
+	cmd.AddCommand(
 		variable.Command(),
-		run.Command(),
+	)
+
+	cmd.AddGroup(&cobra.Group{
+		ID:    execution.GroupID,
+		Title: "Execution:",
+	})
+	cmd.AddCommand(
+		execution.Command(),
 	)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)

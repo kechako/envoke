@@ -12,8 +12,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func removeCommand() *cobra.Command {
+func RemoveCommand() *cobra.Command {
 	cmd := &cobra.Command{
+		GroupID: GroupID,
 		Use:     "remove [flags] <name>",
 		Aliases: []string{"rm"},
 		Short:   "Remove an environment",

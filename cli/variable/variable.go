@@ -5,8 +5,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const GroupID = "variable"
+
 func Command() *cobra.Command {
 	cmd := &cobra.Command{
+		GroupID: GroupID,
 		Use:     "variable",
 		Aliases: []string{"var"},
 		Short:   "Manage environment variables",

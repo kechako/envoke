@@ -11,10 +11,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func updateCommand() *cobra.Command {
+func UpdateCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update [flags] <name>",
-		Short: "Update an environment",
+		GroupID: GroupID,
+		Use:     "update [flags] <name>",
+		Short:   "Update an environment",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if err := cobra.ExactArgs(1)(cmd, args); err != nil {
 				return err

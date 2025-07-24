@@ -11,8 +11,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func renameCommand() *cobra.Command {
+func RenameCommand() *cobra.Command {
 	cmd := &cobra.Command{
+		GroupID: GroupID,
 		Use:     "rename [flags] <name> <new-name>",
 		Aliases: []string{"mv"},
 		Short:   "Rename an environment",

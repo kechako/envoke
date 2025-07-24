@@ -15,8 +15,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func listCommand() *cobra.Command {
+func ListCommand() *cobra.Command {
 	cmd := &cobra.Command{
+		GroupID: GroupID,
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List all environments",

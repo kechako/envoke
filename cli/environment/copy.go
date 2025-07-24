@@ -11,8 +11,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func copyCommand() *cobra.Command {
+func CopyCommand() *cobra.Command {
 	cmd := &cobra.Command{
+		GroupID: GroupID,
 		Use:     "copy [flags] <name> <new-name>",
 		Aliases: []string{"cp"},
 		Short:   "Copy an environment",
