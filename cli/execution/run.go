@@ -7,7 +7,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"os/signal"
+	"path/filepath"
+	"runtime"
 	"syscall"
 
 	"entgo.io/ent/dialect/sql"
@@ -16,7 +17,6 @@ import (
 	"github.com/kechako/envoke/ent"
 	varpred "github.com/kechako/envoke/ent/variable"
 	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
 )
 
 const GroupID = "execution"
@@ -77,47 +77,9 @@ Variable expansion is performed for variables with the expand flag enabled.`,
 			cmdName := args[0]
 			cmdArgs := args[1:]
 
-			// To propagate signals to the child process,
-			// do not use the standard context.Context.
-			command := exec.Command(cmdName, cmdArgs...)
-
-			command.Stdin = os.Stdin
-			command.Stdout = os.Stdout
-			command.Stderr = os.Stderr
-
-			command.Env = environ
-
-			exitCh := make(chan struct{})
-			sigCh := make(chan os.Signal, 1)
-			signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-
-			var g errgroup.Group
-
-			g.Go(func() error {
-				select {
-				case sig := <-sigCh:
-					return command.Process.Signal(sig)
-				case <-exitCh:
-					// child process has exited, no need to handle signals
-					return nil
-				}
-			})
-
-			g.Go(func() error {
-				defer close(exitCh)
-				err := command.Run()
-				if err != nil {
-					return err
-				}
-				return nil
-			})
-
-			if err := g.Wait(); err != nil {
-				var exitErr *exec.ExitError
-				if errors.Is(err, exitErr) {
-					return err
-				}
-				return clierrors.Exit(err, 1)
+			err = execCommand(ctx, cmdName, cmdArgs, environ)
+			if err != nil {
+				return err
 			}
 
 			return nil
@@ -153,4 +115,56 @@ func makeEnviron(ctx context.Context, globalEnv, env *ent.Environment) ([]string
 	}
 
 	return environ, nil
+}
+
+func execCommand(ctx context.Context, name string, args []string, env []string) error {
+	// On Windows, there is no syscall.Exec, so the best we can do
+	// is run a subprocess and exit with the same status.
+	// Doing the same on Unix would be a problem because it wouldn't
+	// propagate signals and such, but there are no signals on Windows.
+	// We also use the exec case when ENVOKE_DEBUG_EXEC=0,
+	// to allow testing this code even when not on Windows.
+	if os.Getenv("ENVOKE_DEBUG_EXEC") == "0" || runtime.GOOS == "windows" {
+		command := exec.CommandContext(ctx, name, args...)
+		command.Stdin = os.Stdin
+		command.Stdout = os.Stdout
+		command.Stderr = os.Stderr
+		command.Env = env
+
+		err := command.Run()
+		if err != nil {
+			if e, ok := err.(*exec.ExitError); ok && e.ProcessState != nil {
+				if e.Exited() {
+					return e
+				}
+				return clierrors.Exit(fmt.Errorf("exec %s: %w", name, e), 1)
+			}
+			return clierrors.Exit(fmt.Errorf("exec %s: %w", name, err), 1)
+		}
+		return nil
+	}
+
+	client := ent.FromContext(ctx)
+	if client != nil {
+		if err := client.Close(); err != nil {
+			return clierrors.Exit(fmt.Errorf("failed to close database connection: %w", err), 1)
+		}
+	}
+
+	path := name
+	if filepath.Base(name) == name {
+		lp, err := exec.LookPath(name)
+		if err != nil {
+			return clierrors.Exit(fmt.Errorf("lookPath %s: %w", name, err), 1)
+		}
+		path = lp
+	}
+
+	argv := append([]string{name}, args...)
+	err := syscall.Exec(path, argv, env)
+	if err != nil {
+		return clierrors.Exit(fmt.Errorf("exec %s: %w", name, err), 1)
+	}
+
+	return nil
 }
