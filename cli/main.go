@@ -25,7 +25,7 @@ import (
 
 const (
 	appName    = "envoke"
-	appVersion = "1.0.0"
+	appVersion = "1.1.0"
 )
 
 func Main() {
