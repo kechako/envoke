@@ -2,6 +2,7 @@
 package util
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -151,4 +152,24 @@ func FindVariable(ctx context.Context, client *ent.Client, environmentID int, na
 		return nil, err
 	}
 	return variable, nil
+}
+
+func ConfirmPrompt(prompt string) (bool, error) {
+	fmt.Printf("%s (y/N): ", prompt)
+
+	s := bufio.NewScanner(os.Stdin)
+	if !s.Scan() {
+		if err := s.Err(); err != nil {
+			return false, fmt.Errorf("failed to read input: %w", err)
+		}
+		return false, fmt.Errorf("no input provided")
+	}
+
+	input := s.Text()
+
+	if len(input) > 0 && (input[0] == 'y' || input[0] == 'Y') {
+		return true, nil
+	}
+
+	return false, nil
 }

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/charmbracelet/huh"
 	"github.com/kechako/envoke/cli/clierrors"
 	"github.com/kechako/envoke/cli/util"
 	"github.com/kechako/envoke/ent"
@@ -75,13 +74,5 @@ func RemoveCommand() *cobra.Command {
 }
 
 func confirmRemoval() (bool, error) {
-	confirm := false
-	err := huh.NewConfirm().
-		Title("Are you sure to remove this environment?").
-		Value(&confirm).
-		Run()
-	if err != nil {
-		return false, fmt.Errorf("failed to get confirmation: %w", err)
-	}
-	return confirm, nil
+	return util.ConfirmPrompt("Are you sure to remove this environment?")
 }
