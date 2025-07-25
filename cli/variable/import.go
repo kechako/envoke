@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"os"
 
 	"github.com/kechako/envfile"
 	"github.com/kechako/envoke/cli/clierrors"
@@ -15,14 +17,14 @@ import (
 
 func importCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "import [flags] <envfile>",
+		Use:   "import [flags] [<envfile>]",
 		Short: "Import environment variables from a file",
 		Args: func(cmd *cobra.Command, args []string) error {
-			if err := cobra.ExactArgs(1)(cmd, args); err != nil {
+			if err := cobra.RangeArgs(0, 1)(cmd, args); err != nil {
 				return err
 			}
 
-			if args[0] == "" {
+			if len(args) > 0 && args[0] == "" {
 				return clierrors.Exit(errors.New("environment file path cannot be empty"), 1)
 			}
 
@@ -31,12 +33,26 @@ func importCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			envfileName := args[0]
 			merge, _ := cmd.Flags().GetBool("merge")
 
-			envs, err := envfile.ParseFile(envfileName)
+			var envfileName string
+			var r io.Reader
+			if len(args) == 0 {
+				envfileName = "<stdin>"
+				r = os.Stdin
+			} else {
+				envfileName = args[0]
+				file, err := os.Open(envfileName)
+				if err != nil {
+					return clierrors.Exit(fmt.Errorf("failed to open environment file '%s': %w", envfileName, err), 1)
+				}
+				defer file.Close()
+				r = file
+			}
+
+			envs, err := envfile.Parse(r)
 			if err != nil {
-				return clierrors.Exit(fmt.Errorf("failed to parse environment file '%s': %w", envfileName, err), 1)
+				return clierrors.Exit(fmt.Errorf("failed to parse environment: %w", err), 1)
 			}
 
 			env, err := util.LoadEnvironment(ctx, cmd)
